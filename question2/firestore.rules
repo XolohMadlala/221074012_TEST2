@@ -1,0 +1,42 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /tasks/{taskId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly([
+          'title',
+          'moduleCode',
+          'priority',
+          'completed',
+          'createdAt'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.moduleCode is string
+        && request.resource.data.moduleCode.size() > 0
+        && request.resource.data.priority in ['Low', 'Medium', 'High']
+        && request.resource.data.completed == false
+        && request.resource.data.createdAt == request.time;
+      allow update: if request.resource.data.keys().hasOnly([
+          'title',
+          'moduleCode',
+          'priority',
+          'completed',
+          'createdAt'
+        ])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['completed'])
+        && request.resource.data.completed is bool;
+      allow delete: if true;
+    }
+
+    match /users/{userId} {
+      allow read, create, update, delete: if request.auth != null
+        && request.auth.uid == userId;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
